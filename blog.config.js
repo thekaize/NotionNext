@@ -20,7 +20,7 @@ const BLOG = {
   BIO: process.env.NEXT_PUBLIC_BIO || '“以颤抖之身追赶，怀敬畏之心挑战”', // 作者简介
   LINK: process.env.NEXT_PUBLIC_LINK || 'www.thefox.work', // 网站地址
   KEYWORDS: process.env.NEXT_PUBLIC_KEYWORD || '博客,Pious fox,经济学，日常思考', // 网站关键词 英文逗号隔开
-  BLOG_FAVICON: process.env.NEXT_PUBLIC_FAVICON || 'https://img.cdn1.vip/i/6a706e7b1c103_1785753211.webp', // blog favicon 配置, 默认使用 /public/favicon.ico，支持在线图片，如 https://img.imesong.com/favicon.png
+  BLOG_FAVICON: process.env.NEXT_PUBLIC_FAVICON || '/favicon.ico', // blog favicon 配置, 默认使用 /public/favicon.ico，支持在线图片，如 https://img.imesong.com/favicon.png
   BEI_AN: process.env.NEXT_PUBLIC_BEI_AN || '', // 备案号 闽ICP备XXXXXX
   BEI_AN_LINK: process.env.NEXT_PUBLIC_BEI_AN_LINK || 'https://beian.miit.gov.cn/', // 备案查询链接，如果用了萌备等备案请在这里填写
   BEI_AN_GONGAN: process.env.NEXT_PUBLIC_BEI_AN_GONGAN || '', // 公安备案号，例如 '浙公网安备3xxxxxxxx8号'
