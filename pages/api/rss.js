@@ -1,7 +1,10 @@
 import BLOG from '@/blog.config'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
-import { generateRss, shouldGenerateRssForLocale } from '@/lib/utils/rss'
+import NotionPage from '@/components/NotionPage'
+import { fetchGlobalAllData, getPostBlocks } from '@/lib/db/SiteDataApi'
+import { formatNotionBlock } from '@/lib/db/notion/getPostBlocks'
+import { adapterNotionBlockMap } from '@/lib/utils/notion.util'
 import { Feed } from 'feed'
+import ReactDOMServer from 'react-dom/server'
 
 /**
  * In-memory RSS cache to avoid regenerating on every request.
@@ -18,6 +21,36 @@ const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
 function isCacheFresh() {
   return rssCache.xml && Date.now() - rssCache.updatedAt < CACHE_TTL_MS
+}
+
+/**
+ * 渲染文章全文 HTML 的辅助函数
+ */
+async function createFeedContent(post) {
+  // 加密的文章内容只返回摘要
+  if (post.password && post.password !== '') {
+    return post.summary || ''
+  }
+  try {
+    const blockMap = await getPostBlocks(post.id, 'rss-content')
+    if (blockMap) {
+      post.blockMap = adapterNotionBlockMap(blockMap)
+      // 格式化内容，部分的样式字段格式在此处理
+      if (post.blockMap?.block) {
+        post.blockMap.block = formatNotionBlock(post.blockMap.block)
+      }
+      
+      // 将 React 组件渲染为静态 HTML 字符串
+      const content = ReactDOMServer.renderToString(<NotionPage post={post} />)
+      // 使用正则过滤掉 Notion 页面的属性头部（避免在正文中显示冗余的标签/日期字段）
+      const regexExp =
+        /<div class="notion-collection-row"><div class="notion-collection-row-body"><div class="notion-collection-row-property"><div class="notion-collection-column-title"><svg.*?class="notion-collection-column-title-icon">.*?<\/svg><div class="notion-collection-column-title-body">.*?<\/div><\/div><div class="notion-collection-row-value">.*?<\/div><\/div><\/div><\/div>/g
+      return content.replace(regexExp, '')
+    }
+  } catch (err) {
+    console.error(`[RSS API] Failed to render content for post ${post.id}:`, err)
+  }
+  return post.summary || ''
 }
 
 /**
@@ -43,6 +76,7 @@ async function generateRssContent() {
   const { siteInfo, allPages, NOTION_CONFIG } = props
 
   // Filter published posts only
+  // 注意：为了防止服务器渲染超时，这里把拉取数量从 20 减少到了 10
   const latestPosts = allPages
     .filter(p => p.type === 'Post' && p.status === 'Published')
     .sort((a, b) => {
@@ -50,7 +84,7 @@ async function generateRssContent() {
       const dateB = new Date(b.publishDay || b.publishDate || 0)
       return dateB - dateA
     })
-    .slice(0, 20)
+    .slice(0, 10)
 
   if (latestPosts.length === 0) {
     return null
@@ -76,11 +110,14 @@ async function generateRssContent() {
     }
   })
 
+  // 逐个生成每篇文章的详细内容
   for (const post of latestPosts) {
+    const fullContent = await createFeedContent(post)
     feed.addItem({
       title: post.title,
       link: `${LINK}/${post.slug}`,
       description: post.summary || '',
+      content: fullContent, // 👈 在这里把 HTML 正文塞入 RSS
       date: new Date(post?.publishDay || post?.publishDate || Date.now())
     })
   }
