@@ -263,6 +263,7 @@ const nextConfig = {
       ]
     },
   // 重写url
+  // 重写url
   rewrites: process.env.EXPORT
     ? undefined
     : () => {
@@ -300,27 +301,30 @@ const nextConfig = {
         )
       }
 
-      return [
-        ...langsRewrites,
-        // RSS fallback: when static file doesn't exist, route to API
-        {
-          source: '/rss/feed.xml',
-          destination: '/api/rss'
-        },
-        {
-          source: '/rss/atom.xml',
-          destination: '/api/rss?format=atom'
-        },
-        {
-          source: '/rss/feed.json',
-          destination: '/api/rss?format=json'
-        },
-        // 伪静态重写
-        {
-          source: '/:path*.html',
-          destination: '/:path*'
-        }
-      ]
+      return {
+        beforeFiles: [
+          {
+            source: '/rss/feed.xml',
+            destination: '/api/rss'
+          },
+          {
+            source: '/rss/atom.xml',
+            destination: '/api/rss?format=atom'
+          },
+          {
+            source: '/rss/feed.json',
+            destination: '/api/rss?format=json'
+          }
+        ],
+        fallback: [
+          ...langsRewrites,
+          // 伪静态重写
+          {
+            source: '/:path*.html',
+            destination: '/:path*'
+          }
+        ]
+      }
     },
   headers: process.env.EXPORT
     ? undefined
